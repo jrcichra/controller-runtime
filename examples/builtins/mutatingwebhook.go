@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // +kubebuilder:webhook:path=/mutate--v1-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.kb.io
@@ -31,11 +32,11 @@ import (
 // podAnnotator annotates Pods
 type podAnnotator struct{}
 
-func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
-		return fmt.Errorf("expected a Pod but got a %T", obj)
+		return nil, fmt.Errorf("expected a Pod but got a %T", obj)
 	}
 
 	if pod.Annotations == nil {
@@ -44,5 +45,5 @@ func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
 	pod.Annotations["example-mutating-admission-webhook"] = "foo"
 	log.Info("Annotated Pod")
 
-	return nil
+	return nil, nil
 }

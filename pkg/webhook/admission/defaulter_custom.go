@@ -30,7 +30,7 @@ import (
 
 // CustomDefaulter defines functions for setting defaults on resources.
 type CustomDefaulter interface {
-	Default(ctx context.Context, obj runtime.Object) error
+	Default(ctx context.Context, obj runtime.Object) (Warnings, error)
 }
 
 // WithCustomDefaulter creates a new Webhook for a CustomDefaulter interface.
@@ -77,18 +77,19 @@ func (h *defaulterForType) Handle(ctx context.Context, req Request) Response {
 	}
 
 	// Default the object
-	if err := h.defaulter.Default(ctx, obj); err != nil {
+	warnings, err := h.defaulter.Default(ctx, obj)
+	if err != nil {
 		var apiStatus apierrors.APIStatus
 		if errors.As(err, &apiStatus) {
-			return validationResponseFromStatus(false, apiStatus.Status())
+			return validationResponseFromStatus(false, apiStatus.Status()).WithWarnings(warnings...)
 		}
-		return Denied(err.Error())
+		return Denied(err.Error()).WithWarnings(warnings...)
 	}
 
 	// Create the patch
 	marshalled, err := json.Marshal(obj)
 	if err != nil {
-		return Errored(http.StatusInternalServerError, err)
+		return Errored(http.StatusInternalServerError, err).WithWarnings(warnings...)
 	}
-	return PatchResponseFromRaw(req.Object.Raw, marshalled)
+	return PatchResponseFromRaw(req.Object.Raw, marshalled).WithWarnings(warnings...)
 }

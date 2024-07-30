@@ -855,21 +855,21 @@ func (dv *TestDefaultValidator) ValidateDelete() (admission.Warnings, error) {
 
 type TestCustomDefaulter struct{}
 
-func (*TestCustomDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (*TestCustomDefaulter) Default(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	logf.FromContext(ctx).Info("Defaulting object")
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("expected admission.Request in ctx: %w", err)
+		return nil, fmt.Errorf("expected admission.Request in ctx: %w", err)
 	}
 	if req.Kind.Kind != testDefaulterKind {
-		return fmt.Errorf("expected Kind TestDefaulter got %q", req.Kind.Kind)
+		return nil, fmt.Errorf("expected Kind TestDefaulter got %q", req.Kind.Kind)
 	}
 
 	d := obj.(*TestDefaulter) //nolint:ifshort
 	if d.Replica < 2 {
 		d.Replica = 2
 	}
-	return nil
+	return nil, nil
 }
 
 var _ admission.CustomDefaulter = &TestCustomDefaulter{}
